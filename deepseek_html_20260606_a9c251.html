@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Telegraf Messenger • Снос аккаунта + возврат</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: #0a0f14;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: #0e1621;
+            position: relative;
+        }
+
+        .header {
+            background: #17212b;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2c3e4e;
+            z-index: 10;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 1.3rem;
+            color: #6ab8f2;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .menu-icon, .back-icon {
+            font-size: 1.8rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: #6ab8f2;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .screen {
+            flex: 1;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .search-filter-bar {
+            padding: 12px 12px 8px;
+            background: #0e1621;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .search-box {
+            background: #242f3a;
+            border-radius: 30px;
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .search-box input {
+            background: transparent;
+            border: none;
+            color: white;
+            width: 100%;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 6px;
+        }
+
+        .filter-chip {
+            background: #2b5270;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 30px;
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .filter-chip.active {
+            background: #3b8fc2;
+        }
+
+        .chats-list {
+            padding: 0 8px 80px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px;
+            background: #17212b;
+            border-radius: 18px;
+            cursor: pointer;
+        }
+
+        .chat-item:active { background: #2c3e4e; }
+        .chat-avatar { width: 52px; height: 52px; background: #2b5270; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+        .chat-info { flex: 1; }
+        .chat-name { font-weight: 600; color: white; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .ban-badge { background: #e03a3e; font-size: 0.65rem; padding: 2px 8px; border-radius: 20px; }
+        .deleted-badge { background: #6c5a2e; font-size: 0.65rem; padding: 2px 8px; border-radius: 20px; }
+        .last-msg { font-size: 0.75rem; color: #8b9bb0; margin-top: 4px; }
+
+        .chat-header {
+            padding: 12px 16px;
+            background: #17212b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #2c3e4e;
+        }
+        .chat-name-large { font-weight: 700; font-size: 1.2rem; color: white; flex: 1; }
+        .chat-actions { display: flex; gap: 8px; }
+        .icon-btn {
+            background: none;
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 30px;
+            color: #6ab8f2;
+        }
+        .messages-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 85%; padding: 10px 14px; border-radius: 20px; background: #2b5270; color: white; align-self: flex-start; word-wrap: break-word; }
+        .message strong { font-size: 0.85rem; color: #ffd966; }
+        .msg-time { font-size: 0.6rem; color: #bbd4ff; margin-top: 4px; text-align: right; }
+        .system-message { text-align: center; font-size: 0.7rem; color: #ffaa77; background: #1e2a32; padding: 5px; border-radius: 20px; margin: 5px auto; width: 90%; }
+        .input-area { padding: 10px 12px; background: #17212b; display: flex; gap: 10px; border-top: 1px solid #2c3e4e; }
+        .input-area input { flex: 1; background: #242f3a; border: none; padding: 12px; border-radius: 30px; color: white; font-size: 1rem; outline: none; }
+        .input-area button { background: #3b8fc2; border: none; width: 48px; border-radius: 30px; font-size: 1.4rem; color: white; cursor: pointer; }
+
+        .profile-screen { padding: 20px 16px; overflow-y: auto; }
+        .card { background: #17212b; border-radius: 28px; padding: 20px; margin-bottom: 20px; }
+        .user-selector select { width: 100%; padding: 12px; background: #242f3a; border: none; border-radius: 30px; color: white; margin-top: 8px; }
+        .ban-controls { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+        .btn { background: #2b5270; border: none; padding: 12px; border-radius: 40px; color: white; font-weight: 600; text-align: center; cursor: pointer; }
+        .btn-danger { background: #9e3a3a; }
+        .btn-success { background: #2e6b3e; }
+        .btn-warning { background: #b97f2e; }
+        .banned-list { margin-top: 12px; font-size: 0.85rem; color: #ccc; max-height: 200px; overflow-y: auto; }
+        .status-badge { display: inline-block; margin-top: 8px; font-size: 0.8rem; background: #2c3e4e; padding: 4px 12px; border-radius: 30px; }
+
+        .footer-tabbar {
+            display: flex;
+            justify-content: space-around;
+            background: #17212b;
+            border-top: 1px solid #2c3e4e;
+            padding: 8px 0 12px;
+        }
+        .tab { flex: 1; text-align: center; padding: 8px; font-size: 0.8rem; color: #8b9bb0; cursor: pointer; border-radius: 30px; }
+        .tab.active { color: #6ab8f2; background: #2c3e4e; font-weight: 600; }
+
+        .call-modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(20px);
+        }
+        .call-card {
+            background: #17212b;
+            border-radius: 48px;
+            width: 85%;
+            max-width: 320px;
+            padding: 24px;
+            text-align: center;
+        }
+        .call-avatar { font-size: 4rem; background: #2b5270; width: 100px; height: 100px; border-radius: 50%; display: flex; margin: 0 auto 16px; align-items: center; justify-content: center; }
+        .call-name { font-size: 1.6rem; font-weight: bold; color: white; }
+        .call-status { margin: 12px 0; color: #8b9bb0; }
+        .call-timer { font-size: 2rem; font-family: monospace; margin: 12px 0; color: #6ab8f2; }
+        .call-buttons { display: flex; gap: 20px; justify-content: center; margin-top: 20px; }
+        .call-btn { width: 60px; height: 60px; border-radius: 50%; border: none; font-size: 1.8rem; cursor: pointer; background: #2b5270; color: white; }
+        .call-btn-end { background: #e03a3e; }
+        .call-btn-answer { background: #2e9c4a; }
+        .video-preview { width: 100%; background: #000; border-radius: 24px; margin: 12px 0; height: 160px; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 0.9rem; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="header" id="appHeader">
+        <button class="menu-icon" id="menuBtn">☰</button>
+        <div class="logo">📡 Telegraf</div>
+        <div style="width:40px;"></div>
+    </div>
+
+    <div class="screen active" id="chatsScreen">
+        <div class="search-filter-bar">
+            <div class="search-box">🔍 <input type="text" id="searchInput" placeholder="Поиск чатов..."></div>
+            <div class="filter-row">
+                <button class="filter-chip active" data-filter="all">Все</button>
+                <button class="filter-chip" data-filter="groups">Группы</button>
+                <button class="filter-chip" data-filter="banned">С баном</button>
+                <button class="filter-chip" data-filter="active">Активные</button>
+            </div>
+        </div>
+        <div class="chats-list" id="chatsList"></div>
+    </div>
+
+    <div class="screen" id="chatScreen">
+        <div class="chat-header">
+            <button class="back-icon" id="backToChatsBtn">←</button>
+            <div class="chat-name-large" id="chatTitle">Чат</div>
+            <div class="chat-actions">
+                <button class="icon-btn" id="audioCallBtn" title="Аудиозвонок">🎙️</button>
+                <button class="icon-btn" id="videoCallBtn" title="Видеозвонок">📹</button>
+                <button class="icon-btn" id="groupBanBtn" style="display: none;">🚫</button>
+            </div>
+        </div>
+        <div class="messages-area" id="messagesArea"><div class="system-message">Выберите диалог</div></div>
+        <div class="input-area">
+            <input type="text" id="msgInput" placeholder="Сообщение...">
+            <button id="sendMsgMobileBtn">➤</button>
+        </div>
+    </div>
+
+    <div class="screen" id="profileScreen">
+        <div class="profile-screen">
+            <div class="card">
+                <h3 style="color:white;">👤 Управление аккаунтами</h3>
+                <div class="user-selector">
+                    <label style="color:#bbb;">Выбери пользователя:</label>
+                    <select id="userSelectBan"></select>
+                </div>
+                <div id="selectedUserInfo" class="status-badge">Активен</div>
+                <div class="ban-controls">
+                    <select id="banDurationSelect">
+                        <option value="5">5 минут</option>
+                        <option value="15">15 минут</option>
+                        <option value="30">30 минут</option>
+                        <option value="60">1 час</option>
+                    </select>
+                    <button class="btn btn-danger" id="applyBanBtnMobile">🔨 Забанить профиль</button>
+                    <button class="btn btn-success" id="unbanBtnMobile">♻ Разбанить</button>
+                </div>
+                <hr style="margin: 16px 0; border-color:#2c3e4e;">
+                <div style="margin-top: 8px;">
+                    <button class="btn btn-warning" id="deleteAccountBtn" style="background:#aa6f20;">💣 Снести аккаунт (удалить)</button>
+                    <button class="btn btn-success" id="restoreAccountBtn" style="margin-top:8px;">🔄 Вернуть автора (восстановить)</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3 style="color:white;">🚫 Забаненные / удалённые аккаунты</h3>
+                <div id="bannedUsersList" class="banned-list">—</div>
+                <button class="btn" id="refreshBannedBtn">Обновить</button>
+            </div>
+            <div class="card">
+                <h3 style="color:white;">➕ Создать группу</h3>
+                <button class="btn" id="createGroupMobileBtn">➕ Новая группа</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-tabbar">
+        <div class="tab active" data-tab="chats">💬 Чаты</div>
+        <div class="tab" data-tab="profile">👤 Профиль & Бан</div>
+    </div>
+</div>
+
+<script>
+    // --- ДАННЫЕ С ДОБАВЛЕННЫМ ФЛАГОМ deleted ---
+    let users = [
+        { id: 'u1', name: 'Алексей', avatar: '👨‍💻', bannedUntil: null, deleted: false },
+        { id: 'u2', name: 'Михаил', avatar: '🧑‍🚀', bannedUntil: null, deleted: false },
+        { id: 'u3', name: 'Дмитрий', avatar: '🎮', bannedUntil: null, deleted: false },
+        { id: 'u4', name: 'Сергей', avatar: '🤖', bannedUntil: null, deleted: false }
+    ];
+
+    let chats = [
+        { id: 'chat1', type: 'group', name: '🏀 Игровой клан', members: ['u1','u2','u3'], messages: [{from:'u2', text:'Привет! Когда игра?', time: Date.now()-3600000}] },
+        { id: 'chat2', type: 'group', name: '🎓 IT-школа', members: ['u1','u3','u4'], messages: [{from:'u1', text:'Кто решил задачу?', time: Date.now()-7200000}] },
+        { id: 'chat3', type: 'private', name: 'Алексей ↔ Михаил', members: ['u1','u2'], messages: [{from:'u2', text:'Скинь кружок', time: Date.now()-1800000}] },
+        { id: 'chat4', type: 'group', name: '🔥 Киберспорт', members: ['u2','u3','u4'], messages: [{from:'u4', text:'Тренировка в 20:00', time: Date.now()-500000}] }
+    ];
+
+    let currentChatId = null;
+    let currentFilter = 'all';
+    let selectedUserForBan = users[0];
+    let activeTab = 'chats';
+
+    // --- Вспомогательные функции с учётом deleted ---
+    function isUserDeleted(userId) {
+        let u = users.find(u => u.id === userId);
+        return u ? u.deleted : false;
+    }
+
+    function isUserBanned(userId) {
+        let u = users.find(u => u.id === userId);
+        if (!u || u.deleted) return true; // удалённый не может писать
+        if (!u.bannedUntil) return false;
+        if (Date.now() > u.bannedUntil) { u.bannedUntil = null; return false; }
+        return true;
+    }
+
+    function updateBanStatuses() {
+        let changed = false;
+        users.forEach(u => { if (u.bannedUntil && Date.now() > u.bannedUntil) { u.bannedUntil = null; changed = true; } });
+        if (changed) { renderChatsList(); renderProfileScreenData(); if(currentChatId) renderMessages(); }
+    }
+
+    // отправка сообщений с проверкой на удаление
+    function sendMessage(chatId, text, fromId = 'u1') {
+        let sender = users.find(u => u.id === fromId);
+        if (!sender || sender.deleted) { alert("Ваш аккаунт удалён, восстановите его в профиле!"); return false; }
+        if (isUserBanned(fromId)) { alert("⚠️ Вы забанены"); return false; }
+        let chat = chats.find(c => c.id === chatId);
+        if (!chat) return false;
+        chat.messages.push({ from: fromId, text: text, time: Date.now() });
+        renderMessages(); renderChatsList();
+        return true;
+    }
+
+    function banUser(userId, minutes) {
+        let user = users.find(u => u.id === userId);
+        if (!user || user.deleted) { alert("Нельзя забанить удалённый аккаунт. Сначала восстановите."); return; }
+        user.bannedUntil = Date.now() + minutes * 60 * 1000;
+        renderChatsList(); renderProfileScreenData(); if(currentChatId) renderMessages();
+        let activeChat = chats.find(c => c.id === currentChatId);
+        if(activeChat && activeChat.members.includes(userId)) activeChat.messages.push({ from:'system', text:`⚠️ ${user.name} забанен на ${minutes} мин`, time:Date.now(), isSystem:true });
+        if(currentChatId) renderMessages();
+    }
+    function unbanUser(userId) { let user = users.find(u=>u.id===userId); if(user && !user.deleted) { user.bannedUntil = null; renderChatsList(); renderProfileScreenData(); if(currentChatId) renderMessages(); } }
+
+    // --- СНОС АККАУНТА И ВОССТАНОВЛЕНИЕ ---
+    function deleteAccount(userId) {
+        let user = users.find(u => u.id === userId);
+        if (!user) return;
+        if (user.deleted) { alert("Аккаунт уже удалён!"); return; }
+        user.deleted = true;
+        user.bannedUntil = null; // снимаем бан при сносе
+        // добавим системное сообщение во все чаты, где участвовал пользователь
+        chats.forEach(chat => {
+            if (chat.members.includes(userId)) {
+                chat.messages.push({ from:'system', text:`📛 Пользователь ${user.name} удалил свой аккаунт (снос)`, time:Date.now(), isSystem:true });
+            }
+        });
+        renderChatsList();
+        renderProfileScreenData();
+        if (currentChatId) renderMessages();
+        // если текущий активный чат — и удалённый был выбран где-то, просто обновим
+        alert(`Аккаунт ${user.name} полностью снесён! Теперь его можно восстановить кнопкой "Вернуть автора".`);
+    }
+
+    function restoreAccount(userId) {
+        let user = users.find(u => u.id === userId);
+        if (!user) return;
+        if (!user.deleted) { alert("Аккаунт не был удалён!"); return; }
+        user.deleted = false;
+        user.bannedUntil = null;
+        chats.forEach(chat => {
+            if (chat.members.includes(userId)) {
+                chat.messages.push({ from:'system', text:`✨ Пользователь ${user.name} восстановил свой аккаунт! Добро пожаловать.`, time:Date.now(), isSystem:true });
+            }
+        });
+        renderChatsList();
+        renderProfileScreenData();
+        if (currentChatId) renderMessages();
+        alert(`Аккаунт ${user.name} возвращён!`);
+    }
+
+    // --- ЗВОНКИ (с учётом удалённых) ---
+    let activeCall = null;
+    function showCallModal(chat, type, isIncoming = false, fromUserName = null) {
+        let modal = document.createElement('div');
+        modal.className = 'call-modal';
+        let targetName = fromUserName || chat.name;
+        let isVideo = type === 'video';
+        modal.innerHTML = `
+            <div class="call-card">
+                <div class="call-avatar">${isVideo ? '📹' : '🎙️'}</div>
+                <div class="call-name">${targetName}</div>
+                <div class="call-status" id="callStatusText">${isIncoming ? 'Входящий вызов...' : 'Соединение...'}</div>
+                <div id="callTimerDisplay" class="call-timer hidden">00:00</div>
+                ${isVideo ? '<div class="video-preview" id="videoPreviewFrame">📹 Видео (демо-режим)<br>🔄 камера активна</div>' : ''}
+                <div class="call-buttons" id="callButtons">
+                    ${isIncoming ? `<button class="call-btn call-btn-answer" id="answerCallBtn">📞 Ответить</button>` : ''}
+                    <button class="call-btn call-btn-end" id="endCallBtn">${isIncoming ? '❌ Отклонить' : '⛔ Завершить'}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const statusSpan = modal.querySelector('#callStatusText');
+        const timerDiv = modal.querySelector('#callTimerDisplay');
+        let callStartTime = null;
+        let timerInterval = null;
+        function endCall() {
+            if (timerInterval) clearInterval(timerInterval);
+            if (activeCall?.timerInterval) clearInterval(activeCall.timerInterval);
+            activeCall = null;
+            modal.remove();
+            let chatObj = chats.find(c => c.id === chat.id);
+            if (chatObj) {
+                let durationMsg = callStartTime ? Math.floor((Date.now() - callStartTime)/1000) : 0;
+                let durationText = durationMsg ? `${Math.floor(durationMsg/60)}:${(durationMsg%60).toString().padStart(2,'0')}` : '';
+                chatObj.messages.push({ from:'system', text:`📞 Звонок завершён${durationText ? ' ('+durationText+')' : ''}`, time:Date.now(), isSystem:true });
+                if(currentChatId === chat.id) renderMessages();
+            }
+        }
+        function startCall() {
+            callStartTime = Date.now();
+            statusSpan.innerText = 'Разговор...';
+            timerDiv.classList.remove('hidden');
+            timerInterval = setInterval(() => {
+                let elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+                let mins = Math.floor(elapsed / 60);
+                let secs = elapsed % 60;
+                timerDiv.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+            }, 1000);
+            activeCall = { type, chatId: chat.id, timerInterval, endCall };
+        }
+        if (!isIncoming) {
+            setTimeout(() => { if (document.body.contains(modal)) startCall(); }, 1500);
+        } else {
+            modal.querySelector('#answerCallBtn')?.addEventListener('click', () => {
+                startCall();
+                const btnsDiv = modal.querySelector('#callButtons');
+                btnsDiv.innerHTML = `<button class="call-btn call-btn-end" id="endCallBtn">⛔ Завершить</button>`;
+                document.getElementById('endCallBtn')?.addEventListener('click', endCall);
+            });
+        }
+        modal.querySelector('#endCallBtn')?.addEventListener('click', endCall);
+    }
+
+    function startCall(chat, type) {
+        if (isUserDeleted('u1')) { alert("Ваш аккаунт удалён, восстановите его в профиле, чтобы звонить."); return; }
+        if (isUserBanned('u1')) { alert("Вы забанены, не можете звонить"); return; }
+        if (chat.type === 'group') showCallModal(chat, type, false, chat.name + ' (группа)');
+        else {
+            let otherId = chat.members.find(m => m !== 'u1');
+            let otherUser = users.find(u => u.id === otherId);
+            if (otherUser && otherUser.deleted) { alert("Собеседник удалил аккаунт, звонок невозможен."); return; }
+            let targetName = otherUser ? otherUser.name : 'Собеседник';
+            showCallModal(chat, type, false, targetName);
+        }
+    }
+
+    // --- Отрисовка интерфейса с учётом deleted ---
+    function renderChatsList() {
+        let filtered = [...chats];
+        if (currentFilter === 'groups') filtered = filtered.filter(c => c.type === 'group');
+        if (currentFilter === 'banned') filtered = filtered.filter(c => c.members.some(m => isUserBanned(m)));
+        if (currentFilter === 'active') filtered = filtered.filter(c => !c.members.some(m => isUserBanned(m)));
+        const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+        if (search) filtered = filtered.filter(c => c.name.toLowerCase().includes(search));
+        const container = document.getElementById('chatsList');
+        if (!container) return;
+        container.innerHTML = '';
+        filtered.forEach(chat => {
+            const lastMsg = chat.messages.length ? chat.messages[chat.messages.length-1].text : 'Нет сообщений';
+            const hasBanned = chat.members.some(m => isUserBanned(m));
+            const hasDeleted = chat.members.some(m => isUserDeleted(m));
+            const deletedBadge = hasDeleted ? '<span class="deleted-badge">🗑 удалён</span>' : '';
+            const div = document.createElement('div');
+            div.className = 'chat-item';
+            div.innerHTML = `
+                <div class="chat-avatar">${chat.type === 'group' ? '👥' : '💬'}</div>
+                <div class="chat-info">
+                    <div class="chat-name">${chat.name} ${hasBanned ? '<span class="ban-badge">🚫 бан</span>' : ''} ${deletedBadge}</div>
+                    <div class="last-msg">${lastMsg.substring(0,50)}</div>
+                </div>
+            `;
+            div.addEventListener('click', () => { currentChatId = chat.id; showScreen('chat'); renderMessages(); updateChatHeader(); });
+            container.appendChild(div);
+        });
+    }
+
+    function renderMessages() {
+        const chat = chats.find(c => c.id === currentChatId);
+        const container = document.getElementById('messagesArea');
+        if (!chat) { container.innerHTML = '<div class="system-message">Чат не выбран</div>'; return; }
+        container.innerHTML = '';
+        chat.messages.forEach(msg => {
+            if (msg.isSystem) { let sys = document.createElement('div'); sys.className = 'system-message'; sys.innerText = msg.text; container.appendChild(sys); return; }
+            let user = users.find(u => u.id === msg.from);
+            let senderName = (user && !user.deleted) ? user.name : '🗑 Удалённый аккаунт';
+            let msgDiv = document.createElement('div'); msgDiv.className = 'message';
+            msgDiv.innerHTML = `<strong>${senderName}</strong><br>${msg.text}<div class="msg-time">${new Date(msg.time).toLocaleTimeString()}</div>`;
+            container.appendChild(msgDiv);
+        });
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function updateChatHeader() {
+        let chat = chats.find(c => c.id === currentChatId);
+        if (chat) {
+            document.getElementById('chatTitle').innerText = chat.name;
+            const groupBanBtn = document.getElementById('groupBanBtn');
+            if (chat.type === 'group') {
+                groupBanBtn.style.display = 'inline-flex';
+                groupBanBtn.onclick = () => { if (selectedUserForBan && !selectedUserForBan.deleted) banUser(selectedUserForBan.id, parseInt(document.getElementById('banDurationSelect').value)); else alert("Выберите не удалённого пользователя"); };
+            } else groupBanBtn.style.display = 'none';
+            const audioBtn = document.getElementById('audioCallBtn');
+            const videoBtn = document.getElementById('videoCallBtn');
+            audioBtn.onclick = () => startCall(chat, 'audio');
+            videoBtn.onclick = () => startCall(chat, 'video');
+        }
+    }
+
+    function renderProfileScreenData() {
+        const select = document.getElementById('userSelectBan');
+        if (select) {
+            select.innerHTML = '';
+            users.forEach(u => {
+                let status = '';
+                if (u.deleted) status = '🗑 снесён';
+                else if (isUserBanned(u.id)) status = '⛔ забанен';
+                else status = '✅ активен';
+                let opt = document.createElement('option');
+                opt.value = u.id;
+                opt.textContent = `${u.name} — ${status}`;
+                select.appendChild(opt);
+            });
+            if (selectedUserForBan && users.find(u=>u.id===selectedUserForBan.id)) select.value = selectedUserForBan.id;
+            else { selectedUserForBan = users[0]; select.value = users[0].id; }
+            select.onchange = (e) => { selectedUserForBan = users.find(u => u.id === e.target.value); updateProfileInfo(); };
+        }
+        updateProfileInfo();
+        const bannedDiv = document.getElementById('bannedUsersList');
+        if (bannedDiv) {
+            let bannedUsers = users.filter(u => isUserBanned(u.id) && !u.deleted);
+            let deletedUsers = users.filter(u => u.deleted);
+            let text = '';
+            if (bannedUsers.length) text += `🔴 Забаненные: ${bannedUsers.map(u=>u.name).join(', ')}<br>`;
+            if (deletedUsers.length) text += `🗑 Снесённые аккаунты: ${deletedUsers.map(u=>u.name).join(', ')}<br>`;
+            bannedDiv.innerHTML = text || '🚫 Нет забаненных или удалённых';
+        }
+    }
+
+    function updateProfileInfo() {
+        if (!selectedUserForBan) return;
+        const infoDiv = document.getElementById('selectedUserInfo');
+        if (infoDiv) {
+            if (selectedUserForBan.deleted) { infoDiv.innerHTML = `🗑 Аккаунт УДАЛЁН (снесён) — восстановите кнопкой "Вернуть автора"`; infoDiv.style.background = '#aa6f20'; }
+            else if (isUserBanned(selectedUserForBan.id)) {
+                let remain = Math.max(0, Math.floor((selectedUserForBan.bannedUntil - Date.now()) / 1000 / 60));
+                infoDiv.innerHTML = `⛔ Забанен (осталось ${remain} мин)`;
+                infoDiv.style.background = '#9e3a3a';
+            } else { infoDiv.innerHTML = `✅ Активен`; infoDiv.style.background = '#2e6b3e'; }
+        }
+    }
+
+    function createGroup() { let name = prompt("Название группы:"); if (!name) return; let newId = 'chat'+Date.now(); chats.push({ id:newId, type:'group', name:name, members:['u1','u2','u3'], messages:[{from:'system', text:`Группа "${name}" создана!`, time:Date.now(), isSystem:true}] }); renderChatsList(); currentChatId = newId; showScreen('chat'); renderMessages(); updateChatHeader(); }
+
+    function showScreen(screen) {
+        document.getElementById('chatsScreen').classList.remove('active');
+        document.getElementById('chatScreen').classList.remove('active');
+        document.getElementById('profileScreen').classList.remove('active');
+        if (screen === 'chats') { document.getElementById('chatsScreen').classList.add('active'); document.getElementById('appHeader').style.display = 'flex'; renderChatsList(); activeTab='chats'; }
+        else if (screen === 'chat') { document.getElementById('chatScreen').classList.add('active'); document.getElementById('appHeader').style.display = 'none'; activeTab='chat'; }
+        else if (screen === 'profile') { document.getElementById('profileScreen').classList.add('active'); document.getElementById('appHeader').style.display = 'flex'; renderProfileScreenData(); activeTab='profile'; }
+        document.querySelectorAll('.tab').forEach(tab => { if((screen==='chats' && tab.dataset.tab==='chats')||(screen==='profile' && tab.dataset.tab==='profile')) tab.classList.add('active'); else tab.classList.remove('active'); });
+    }
+
+    // События
+    function bindEvents() {
+        document.getElementById('menuBtn')?.addEventListener('click', () => showScreen('profile'));
+        document.getElementById('backToChatsBtn')?.addEventListener('click', () => showScreen('chats'));
+        document.getElementById('sendMsgMobileBtn')?.addEventListener('click', () => { let inp = document.getElementById('msgInput'); if(inp.value.trim() && currentChatId) { sendMessage(currentChatId, inp.value.trim()); inp.value=''; } });
+        document.getElementById('createGroupMobileBtn')?.addEventListener('click', createGroup);
+        document.getElementById('applyBanBtnMobile')?.addEventListener('click', () => { if(selectedUserForBan && !selectedUserForBan.deleted) banUser(selectedUserForBan.id, parseInt(document.getElementById('banDurationSelect').value)); else alert("Нельзя забанить удалённый аккаунт. Сначала восстановите."); });
+        document.getElementById('unbanBtnMobile')?.addEventListener('click', () => { if(selectedUserForBan && !selectedUserForBan.deleted) unbanUser(selectedUserForBan.id); else alert("Удалённый аккаунт нельзя разбанить, сначала восстановите."); });
+        document.getElementById('refreshBannedBtn')?.addEventListener('click', () => renderProfileScreenData());
+        document.getElementById('searchInput')?.addEventListener('input', () => renderChatsList());
+        document.querySelectorAll('.filter-chip').forEach(btn => { btn.addEventListener('click', (e) => { currentFilter = btn.dataset.filter; document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderChatsList(); }); });
+        document.querySelectorAll('.tab').forEach(tab => { tab.addEventListener('click', () => { if(tab.dataset.tab === 'chats') showScreen('chats'); else if(tab.dataset.tab === 'profile') showScreen('profile'); }); });
+        document.getElementById('deleteAccountBtn')?.addEventListener('click', () => { if(selectedUserForBan) deleteAccount(selectedUserForBan.id); else alert("Выберите пользователя"); });
+        document.getElementById('restoreAccountBtn')?.addEventListener('click', () => { if(selectedUserForBan && selectedUserForBan.deleted) restoreAccount(selectedUserForBan.id); else alert("Этот аккаунт не удалён или не выбран"); });
+        setInterval(() => { updateBanStatuses(); if(activeTab === 'profile') renderProfileScreenData(); if(currentChatId) renderMessages(); renderChatsList(); }, 1000);
+    }
+
+    function init() { renderChatsList(); renderProfileScreenData(); bindEvents(); if(chats.length) currentChatId = chats[0].id; showScreen('chats'); }
+    init();
+</script>
+</body>
+</html>
